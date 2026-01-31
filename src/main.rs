@@ -1,6 +1,7 @@
-mod recursive_solution;
-
 use std::time::Instant;
+
+#[cfg(test)]
+mod test;
 
 fn main() {
     let faces: i8 = 10;
@@ -166,25 +167,4 @@ fn solve_iterative(faces: i8, max_iterations: i8) -> Results {
         + seen_right.iter().sum::<u128>();
 
     Results { wins, losses, ties }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_solve_iterative() {
-        let Results { wins, losses, ties } = solve_iterative(4, 4);
-        assert_eq!(wins, 4);
-        assert_eq!(losses, 10);
-        assert_eq!(ties, 2);
-    }
-
-    #[test]
-    fn test_solve_recursive() {
-        let Results { wins, losses, ties } = recursive_solution::solve_recursive(4, 4);
-        assert_eq!(wins, 4);
-        assert_eq!(losses, 10);
-        assert_eq!(ties, 2);
-    }
 }
