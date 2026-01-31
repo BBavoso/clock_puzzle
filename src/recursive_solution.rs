@@ -1,16 +1,9 @@
-use std::time::Instant;
-
-pub(crate) fn solve_recursive(faces: i8, max_iterations: i8) {
+#[allow(dead_code)]
+pub(crate) fn solve_recursive(faces: i8, max_iterations: i8) -> crate::Results {
     let mut win: u128 = 0;
     let mut loss: u128 = 0;
     let mut tie: u128 = 0;
     let target: i8 = faces / 2;
-    let start = Instant::now();
-
-    println!(
-        "Calculating outcomes for target {}, faces {}, iterations {}",
-        target, faces, max_iterations
-    );
 
     solve(
         0,
@@ -25,24 +18,14 @@ pub(crate) fn solve_recursive(faces: i8, max_iterations: i8) {
         max_iterations,
     );
 
-    println!(
-        "Wins: {}, Losses: {}, Ties: {}, Total: {}",
-        win,
-        loss,
-        tie,
-        win + loss + tie
-    );
-    println!(
-        "{:.10} <= p <= {:.10}",
-        (win as f64 / (win + loss + tie) as f64),
-        ((win + tie) as f64 / (win + loss + tie) as f64)
-    );
-    println!("Guess p = {:.10}", 1 as f64 / (faces - 1) as f64);
-    let elapsed = start.elapsed();
-    println!("Finished in {:?}", elapsed);
+    crate::Results {
+        wins: win,
+        losses: loss,
+        ties: tie,
+    }
 }
 
-pub(crate) fn solve(
+fn solve(
     i: i8,
     n: i8,
     mut l: bool,
