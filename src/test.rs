@@ -29,7 +29,12 @@ Ties: 2
 #[test]
 fn test_solve_iterative() {
     let Results { wins, losses, ties } = solve_iterative(4, 4);
-    assert_eq!(wins, 4);
-    assert_eq!(losses, 10);
-    assert_eq!(ties, 2);
+    assert_eq!(wins.to_u64_digits()[0], 4);
+    assert_eq!(losses.to_u64_digits()[0], 10);
+    assert_eq!(ties.to_u64_digits()[0], 2);
+}
+
+#[test]
+fn tttt() {
+    panic!()
 }

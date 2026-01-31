@@ -1,11 +1,24 @@
 use std::time::Instant;
 
+use num_bigint::{BigInt, BigUint, ToBigInt};
+
 #[cfg(test)]
 mod test;
 
 fn main() {
-    let faces: i8 = 10;
-    let max_iterations: i8 = 127;
+    let args: Vec<String> = std::env::args().collect();
+
+    let faces: usize = args
+        .get(1)
+        .expect("Please provide faces as first argument")
+        .parse()
+        .expect("Faces must be a valid number");
+
+    let max_iterations: usize = args
+        .get(2)
+        .expect("Please provide max_iterations as second argument")
+        .parse()
+        .expect("max_iterations must be a valid number");
 
     assert_eq!(faces % 2, 0, "Faces must be even");
 
@@ -24,34 +37,9 @@ fn main() {
     println!("Finished in {:?}", elapsed);
 }
 
-struct Results {
-    wins: u128,
-    losses: u128,
-    ties: u128,
-}
-
-impl Results {
-    fn print_results(&self, faces: i8, max_iterations: i8) {
-        println!(
-            "Results for faces: {}, iterations: {}",
-            faces, max_iterations
-        );
-        println!("Wins: {}", self.wins);
-        println!("Losses: {}", self.losses);
-        println!("Ties: {}", self.ties);
-        println!("Total: {}", self.wins + self.losses + self.ties);
-        println!("Guess p = {:.10}", 1_f64 / (faces - 1) as f64);
-        println!(
-            "{:.10} <= p <= {:.10}",
-            (self.wins as f64 / (self.wins + self.losses + self.ties) as f64),
-            ((self.wins + self.ties) as f64 / (self.wins + self.losses + self.ties) as f64)
-        );
-    }
-}
-
-fn solve_iterative(faces: i8, max_iterations: i8) -> Results {
-    let mut wins: u128 = 0;
-    let mut losses: u128 = 0;
+fn solve_iterative(faces: usize, max_iterations: usize) -> Results {
+    let mut wins: BigUint = 0u128.into();
+    let mut losses: BigUint = 0u128.into();
 
     // arrays to hold the number of ways to reach each position
     // the seen left and right arrays indicate whether we've seen
@@ -59,27 +47,27 @@ fn solve_iterative(faces: i8, max_iterations: i8) -> Results {
     // note that none seen could be 2 faces smaller and left and right
     // could be 1 face smaller but this size alligns them much easier
     let seen_size = (faces - 1) as usize;
-    let mut seen_none = vec![0u128; seen_size];
-    let mut seen_left = vec![0u128; seen_size];
-    let mut seen_right = vec![0u128; seen_size];
+    let mut seen_none = vec![BigUint::ZERO; seen_size];
+    let mut seen_left = vec![BigUint::ZERO; seen_size];
+    let mut seen_right = vec![BigUint::ZERO; seen_size];
 
     // the array is shifted such that the middle index
     // is the starting face (12 o'clock)
     let shift = (faces - 2) / 2;
 
-    seen_none[shift as usize] = 1;
+    seen_none[shift as usize] = BigUint::from(1u8);
 
     for current_iteration in 0..max_iterations {
-        let mut next_seen_none = vec![0u128; seen_size];
-        let mut next_seen_left = vec![0u128; seen_size];
-        let mut next_seen_right = vec![0u128; seen_size];
+        let mut next_seen_none = vec![BigUint::ZERO; seen_size];
+        let mut next_seen_left = vec![BigUint::ZERO; seen_size];
+        let mut next_seen_right = vec![BigUint::ZERO; seen_size];
 
         // earlier rounds have more weight because
         // the possible outcomes double each iteration
         let weight = (max_iterations - current_iteration - 1) as u128;
 
         for (i, n) in seen_none.iter().enumerate() {
-            if *n == 0 {
+            if *n == BigUint::ZERO {
                 continue;
             }
 
@@ -108,7 +96,7 @@ fn solve_iterative(faces: i8, max_iterations: i8) -> Results {
             next_seen_none[i + 1] += n;
         }
         for (i, n) in seen_left.iter().enumerate() {
-            if *n == 0 {
+            if *n == BigUint::ZERO {
                 continue;
             }
 
@@ -133,7 +121,7 @@ fn solve_iterative(faces: i8, max_iterations: i8) -> Results {
             next_seen_left[i + 1] += n;
         }
         for (i, n) in seen_right.iter().enumerate() {
-            if *n == 0 {
+            if *n == BigUint::ZERO {
                 continue;
             }
 
@@ -162,9 +150,68 @@ fn solve_iterative(faces: i8, max_iterations: i8) -> Results {
         seen_right = next_seen_right;
     }
 
-    let ties = seen_none.iter().sum::<u128>()
-        + seen_left.iter().sum::<u128>()
-        + seen_right.iter().sum::<u128>();
+    let ties = seen_none.iter().sum::<BigUint>()
+        + seen_left.iter().sum::<BigUint>()
+        + seen_right.iter().sum::<BigUint>();
 
     Results { wins, losses, ties }
+}
+
+struct Results {
+    wins: BigUint,
+    losses: BigUint,
+    ties: BigUint,
+}
+
+impl Results {
+    fn print_results(&self, faces: usize, max_iterations: usize) {
+        println!(
+            "Results for faces: {}, iterations: {}",
+            faces, max_iterations
+        );
+        // println!("Wins: {}", self.wins);
+        // println!("Losses: {}", self.losses);
+        // println!("Ties: {}", self.ties);
+        let total = &self.wins + &self.losses + &self.ties;
+        // println!("Total: {}", total);
+        println!("Guess p = {:.10}", 1_f64 / (faces - 1) as f64);
+        println!(
+            "{} <= p <= {}",
+            format_rational(
+                &self.wins.to_bigint().unwrap(),
+                &total.to_bigint().unwrap(),
+                20
+            ),
+            format_rational(
+                &(&self.wins + &self.ties).to_bigint().unwrap(),
+                &(&self.wins + &self.losses + &self.ties)
+                    .to_bigint()
+                    .unwrap(),
+                20
+            )
+        );
+    }
+}
+fn format_rational(numerator: &BigInt, denominator: &BigInt, decimals: u32) -> String {
+    let scale = BigInt::from(10).pow(decimals);
+
+    let scaled = numerator * &scale;
+    use num_integer::Integer;
+    let (quotient, remainder) = scaled.div_rem(denominator);
+
+    use num_traits::sign::Signed;
+    let rounded = if remainder.abs() * 2 >= denominator.abs() {
+        if (numerator.signum() * denominator.signum()).is_negative() {
+            quotient - 1
+        } else {
+            quotient + 1
+        }
+    } else {
+        quotient
+    };
+
+    let int_part = &rounded / &scale;
+    let frac_part = (&rounded.abs() % &scale).to_string();
+
+    format!("{}.{}", int_part, format!("{:0>10}", frac_part))
 }
