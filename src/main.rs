@@ -189,7 +189,7 @@ impl Results {
             ),
             format_rational(
                 &(&self.wins + &self.ties).to_bigint().unwrap(),
-                &(&total).to_bigint().unwrap(),
+                &total.to_bigint().unwrap(),
                 answer_decimals
             )
         );
