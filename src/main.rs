@@ -18,9 +18,19 @@ fn main() {
         .get(2)
         .expect("Please provide max_iterations as second argument")
         .parse()
-        .expect("max_iterations must be a valid number");
+        .expect("Max Iterations must be a valid number");
+
+    let answer_decimals: usize = args
+        .get(3)
+        .unwrap_or(&"10".to_string())
+        .parse()
+        .expect("Decimal Accuracy must be a valid number");
 
     assert_eq!(faces % 2, 0, "Faces must be even");
+    assert!(
+        faces >= 4,
+        "Faces must be at least 4 to have a valid starting position"
+    );
 
     let start = Instant::now();
 
@@ -31,22 +41,22 @@ fn main() {
 
     let results = solve_iterative(faces, max_iterations);
 
-    results.print_results(faces, max_iterations);
+    results.print_results(faces, max_iterations, answer_decimals);
 
     let elapsed = start.elapsed();
     println!("Finished in {:?}", elapsed);
 }
 
 fn solve_iterative(faces: usize, max_iterations: usize) -> Results {
-    let mut wins: BigUint = 0u128.into();
-    let mut losses: BigUint = 0u128.into();
+    let mut wins = BigUint::ZERO;
+    let mut losses = BigUint::ZERO;
 
     // arrays to hold the number of ways to reach each position
     // the seen left and right arrays indicate whether we've seen
     // the face immediately adjacent to the target face
     // note that none seen could be 2 faces smaller and left and right
     // could be 1 face smaller but this size alligns them much easier
-    let seen_size = (faces - 1) as usize;
+    let seen_size = faces - 1;
     let mut seen_none = vec![BigUint::ZERO; seen_size];
     let mut seen_left = vec![BigUint::ZERO; seen_size];
     let mut seen_right = vec![BigUint::ZERO; seen_size];
@@ -55,7 +65,7 @@ fn solve_iterative(faces: usize, max_iterations: usize) -> Results {
     // is the starting face (12 o'clock)
     let shift = (faces - 2) / 2;
 
-    seen_none[shift as usize] = BigUint::from(1u8);
+    seen_none[shift] = BigUint::from(1u8);
 
     for current_iteration in 0..max_iterations {
         let mut next_seen_none = vec![BigUint::ZERO; seen_size];
@@ -64,7 +74,7 @@ fn solve_iterative(faces: usize, max_iterations: usize) -> Results {
 
         // earlier rounds have more weight because
         // the possible outcomes double each iteration
-        let weight = (max_iterations - current_iteration - 1) as u128;
+        let weight = max_iterations - current_iteration - 1;
 
         for (i, n) in seen_none.iter().enumerate() {
             if *n == BigUint::ZERO {
@@ -164,36 +174,30 @@ struct Results {
 }
 
 impl Results {
-    fn print_results(&self, faces: usize, max_iterations: usize) {
+    fn print_results(&self, faces: usize, max_iterations: usize, answer_decimals: usize) {
         println!(
             "Results for faces: {}, iterations: {}",
             faces, max_iterations
         );
-        // println!("Wins: {}", self.wins);
-        // println!("Losses: {}", self.losses);
-        // println!("Ties: {}", self.ties);
         let total = &self.wins + &self.losses + &self.ties;
-        // println!("Total: {}", total);
-        println!("Guess p = {:.10}", 1_f64 / (faces - 1) as f64);
         println!(
             "{} <= p <= {}",
             format_rational(
                 &self.wins.to_bigint().unwrap(),
                 &total.to_bigint().unwrap(),
-                20
+                answer_decimals
             ),
             format_rational(
                 &(&self.wins + &self.ties).to_bigint().unwrap(),
-                &(&self.wins + &self.losses + &self.ties)
-                    .to_bigint()
-                    .unwrap(),
-                20
+                &(&total).to_bigint().unwrap(),
+                answer_decimals
             )
         );
     }
 }
-fn format_rational(numerator: &BigInt, denominator: &BigInt, decimals: u32) -> String {
-    let scale = BigInt::from(10).pow(decimals);
+
+fn format_rational(numerator: &BigInt, denominator: &BigInt, decimals: usize) -> String {
+    let scale = BigInt::from(10).pow(decimals as u32);
 
     let scaled = numerator * &scale;
     use num_integer::Integer;
@@ -213,5 +217,5 @@ fn format_rational(numerator: &BigInt, denominator: &BigInt, decimals: u32) -> S
     let int_part = &rounded / &scale;
     let frac_part = (&rounded.abs() % &scale).to_string();
 
-    format!("{}.{}", int_part, format!("{:0>10}", frac_part))
+    format!("{}.{}", int_part, frac_part)
 }

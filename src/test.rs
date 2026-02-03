@@ -33,8 +33,3 @@ fn test_solve_iterative() {
     assert_eq!(losses.to_u64_digits()[0], 10);
     assert_eq!(ties.to_u64_digits()[0], 2);
 }
-
-#[test]
-fn tttt() {
-    panic!()
-}
